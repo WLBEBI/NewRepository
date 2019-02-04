@@ -1,0 +1,41 @@
+#Insert a record into the error table
+#Begin Change by Eric Defaut 30/03/2009: add list of column names + ACQUIRER_CODE
+sql('DS_DWH'
+ ,'insert into W_ERROR_TABLE '
+||'(TABLE_NAME'
+||',LOAD_DATE'
+||',SET_DATE'
+||',USAGE'
+||',ERROR_DESC'
+||',CREATED_DATE'
+||',CREATED_USER'
+||',INSTANCE_ID) '
+||'values '
+||'({$G_TARGETTABLE}'
+||',to_date({$G_LOADDATE},\'yyyy.mm.dd hh24:mi:ss\')'
+||',to_date({$G_SETDATE},\'yyyy.mm.dd\')'
+||',null'
+||',{$P_ERRORMESS}'
+||',sysdate'
+||',{$G_WFNAME}'
+||',{$G_ACQUIRER_CODE})');
+#End Change by Eric Defaut 30/03/2009: add list of column names + ACQUIRER_CODE
+
+
+#Print a message on the control screen
+print(' ');
+print('DWH_CCBME_Error: [$P_ERRORMESS]');
+print(' ');
+
+#Send an email for one or more recipients
+#mail_to('[$G_MAILLIST]', '[$P_ERRORMESS]','', 0, 0);
+
+##Change by AI team as per ROBE 05/09/2018: In case of error,update the control table with usage 'N' and abort.
+$G_ERROR = $G_ERROR+1;
+if ($G_ERROR <> 0)
+begin
+sql('DS_DWH', 'update CCWH_MAIN.W_CONTROL_ETL set usage=\'N\' where DESTINATION_TABLE={$G_TARGETTABLE} and PROCESS = {$G_WFNAME}and  load_date = to_date({$G_LOADDATE},\'yyyy.mm.dd hh24;mi:ss\')');
+print('INFO :Error has been occured in workflow::{$G_WFNAME}');
+raise_exception_ext('Error has been occured in workflow::{$G_WFNAME}',1);
+END
+Return(1);
